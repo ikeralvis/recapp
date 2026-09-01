@@ -1,3 +1,4 @@
+[![Netlify Status](https://api.netlify.com/api/v1/badges/658a7bd5-0494-49f9-8a0c-87cddb96d253/deploy-status)](https://app.netlify.com/projects/recapp-tracker/deploys)
 # Astro Starter Kit: Minimal
 
 ```sh
