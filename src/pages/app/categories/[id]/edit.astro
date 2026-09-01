@@ -1,0 +1,64 @@
+---
+import AppShell from '../../../../layouts/AppShell.astro';
+import CategoryForm from '../../../../components/CategoryForm';
+import { ArrowLeft } from '@lucide/astro';
+import { eq } from 'drizzle-orm';
+import { db } from '../../../../db/client';
+import { categories } from '../../../../db/schema';
+import { canAccessCategory } from '../../../../lib/categoryAccess';
+
+const userId = Astro.locals.user!.id;
+const id = Number(Astro.params.id);
+
+const category = Number.isInteger(id) ? await db.select().from(categories).where(eq(categories.id, id)).get() : null;
+
+if (!category || !(await canAccessCategory(userId, category))) {
+	return Astro.redirect('/app/categories');
+}
+---
+
+<AppShell title={`Editar ${category.name} — RecApp`} active="home">
+	<header class="px-6 pt-8 pb-5">
+		<a href="/app/categories" class="inline-flex items-center gap-1 text-sm font-semibold text-blue-600">
+			<ArrowLeft size={16} /> Mis categorías
+		</a>
+		<h1 class="font-display text-2xl font-extrabold text-slate-900">Editar categoría</h1>
+	</header>
+
+	<section class="flex flex-col gap-4 px-6">
+		<div class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-sky-100">
+			<CategoryForm
+				client:load
+				initial={{
+					id: category.id,
+					name: category.name,
+					icon: category.icon ?? '',
+					kind: category.kind,
+					ownerType: category.ownerType,
+					groupId: category.ownerType === 'group' ? category.ownerId : null,
+					visibility: category.visibility,
+					fields: category.kind === 'detailed' ? (category.schemaJson as any) : [],
+				}}
+			/>
+		</div>
+		<button
+			id="archive-btn"
+			data-id={category.id}
+			class="rounded-2xl border-2 border-red-100 px-4 py-3 text-center font-semibold text-red-500 hover:bg-red-50"
+		>
+			Archivar categoría
+		</button>
+	</section>
+
+	<script>
+		import { setFlashMessage } from '../../../../lib/flash';
+
+		document.getElementById('archive-btn')?.addEventListener('click', async (e) => {
+			const btn = e.currentTarget as HTMLButtonElement;
+			if (!confirm('¿Archivar esta categoría? Podrás seguir viendo su historial pero no aparecerá para registrar.')) return;
+			await fetch(`/api/categories/${btn.dataset.id}`, { method: 'DELETE' });
+			setFlashMessage('Categoría archivada');
+			window.location.href = '/app/categories';
+		});
+	</script>
+</AppShell>

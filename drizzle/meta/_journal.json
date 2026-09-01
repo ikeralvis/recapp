@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1788285866064,
+      "tag": "0000_square_nova",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1788287402671,
+      "tag": "0001_unknown_warpath",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788289894732,
+      "tag": "0002_jittery_cyclops",
+      "breakpoints": true
+    }
+  ]
+}

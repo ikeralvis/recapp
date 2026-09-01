@@ -1,0 +1,108 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PasswordField from '../components/PasswordField.astro';
+import { LogIn } from '@lucide/astro';
+
+const redirectParam = Astro.url.searchParams.get('redirect');
+const safeRedirect = redirectParam && redirectParam.startsWith('/app') ? redirectParam : '/app';
+
+if (Astro.locals.user) {
+	return Astro.redirect(safeRedirect);
+}
+---
+
+<Layout title="Iniciar sesión — RecApp">
+	<main class="flex min-h-screen items-center justify-center bg-linear-to-br from-blue-500 via-sky-500 to-cyan-400 px-4 py-12">
+		<div class="w-full max-w-sm rounded-3xl bg-white p-8 shadow-2xl shadow-blue-900/20">
+			<div class="mb-6 flex flex-col items-center text-center">
+				<span class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+					<LogIn size={22} />
+				</span>
+				<h1 class="mt-2 font-display text-2xl font-extrabold text-slate-900">¡Bienvenido de nuevo!</h1>
+				<p class="mt-1 text-sm text-slate-500">Entra para seguir registrando</p>
+			</div>
+
+			<form id="login-form" class="flex flex-col gap-4">
+				<label class="flex flex-col gap-1 text-sm font-semibold text-slate-700">
+					Email
+					<input
+						name="email"
+						type="email"
+						required
+						class="rounded-2xl border-2 border-sky-100 bg-white px-4 py-3 font-medium text-slate-900 outline-none transition focus:border-blue-500"
+					/>
+				</label>
+
+				<PasswordField label="Contraseña" autocomplete="current-password" />
+
+				<p id="error" class="hidden rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-600"></p>
+
+				<button
+					type="submit"
+					class="submit-btn mt-2 flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 font-bold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
+				>
+					<svg class="btn-spinner hidden h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+						<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+					</svg>
+					<span class="btn-label">Entrar</span>
+				</button>
+			</form>
+
+			<p class="mt-5 text-center text-sm text-slate-500">
+				¿No tienes cuenta?
+				<a
+					href={redirectParam ? `/register?redirect=${encodeURIComponent(redirectParam)}` : '/register'}
+					class="font-bold text-blue-600 hover:underline"
+				>
+					Regístrate
+				</a>
+			</p>
+		</div>
+	</main>
+
+	<script>
+		const form = document.getElementById('login-form') as HTMLFormElement;
+		const errorEl = document.getElementById('error')!;
+		const submitBtn = form.querySelector('.submit-btn') as HTMLButtonElement;
+		const btnLabel = form.querySelector('.btn-label')!;
+		const btnSpinner = form.querySelector('.btn-spinner')!;
+
+		function setLoading(loading: boolean) {
+			submitBtn.disabled = loading;
+			btnSpinner.classList.toggle('hidden', !loading);
+			btnLabel.textContent = loading ? 'Entrando…' : 'Entrar';
+		}
+
+		form.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			errorEl.classList.add('hidden');
+			setLoading(true);
+			const data = Object.fromEntries(new FormData(form));
+
+			try {
+				const res = await fetch('/api/auth/login', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(data),
+				});
+
+				if (!res.ok) {
+					const { error } = await res.json();
+					errorEl.textContent = error ?? 'Algo ha ido mal.';
+					errorEl.classList.remove('hidden');
+					setLoading(false);
+					return;
+				}
+
+				const params = new URLSearchParams(window.location.search);
+				const redirect = params.get('redirect');
+				window.location.href = redirect && redirect.startsWith('/app') ? redirect : '/app';
+			} catch {
+				errorEl.textContent = 'No se ha podido conectar. Inténtalo de nuevo.';
+				errorEl.classList.remove('hidden');
+				setLoading(false);
+			}
+		});
+	</script>
+</Layout>

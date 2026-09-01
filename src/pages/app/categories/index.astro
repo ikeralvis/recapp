@@ -1,0 +1,54 @@
+---
+import AppShell from '../../../layouts/AppShell.astro';
+import CategoryIcon from '../../../components/CategoryIcon.astro';
+import { ArrowLeft, Plus, Users } from '@lucide/astro';
+import { listAccessibleCategories } from '../../../lib/categoryAccess';
+
+const userId = Astro.locals.user!.id;
+const myCategories = await listAccessibleCategories(userId);
+---
+
+<AppShell title="Mis categorías — RecApp" active="home">
+	<header class="flex items-center justify-between px-6 pt-8 pb-5">
+		<div>
+			<a href="/app" class="inline-flex items-center gap-1 text-sm font-semibold text-blue-600">
+				<ArrowLeft size={16} /> Volver
+			</a>
+			<h1 class="font-display text-2xl font-extrabold text-slate-900">Mis categorías</h1>
+		</div>
+		<a
+			href="/app/categories/new"
+			class="inline-flex items-center gap-1 rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700"
+		>
+			<Plus size={16} /> Nueva
+		</a>
+	</header>
+
+	<section class="px-6">
+		{
+			myCategories.length === 0 ? (
+				<p class="rounded-3xl bg-white px-4 py-8 text-center text-sm text-slate-500 shadow-sm ring-1 ring-sky-100">
+					Todavía no tienes categorías. ¡Crea la primera!
+				</p>
+			) : (
+				<div class="grid grid-cols-2 gap-3">
+					{myCategories.map((c) => (
+						<a
+							href={`/app/categories/${c.id}`}
+							class="flex flex-col gap-1 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-sky-100 transition hover:ring-blue-300"
+						>
+							<div class="flex items-center justify-between">
+								<span class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+									<CategoryIcon name={c.icon} class="h-5 w-5" />
+								</span>
+								{c.ownerType === 'group' && <Users size={14} class="text-slate-400" />}
+							</div>
+							<span class="font-semibold text-slate-800">{c.name}</span>
+							<span class="text-xs font-medium text-slate-400">{c.kind === 'counter' ? 'Contador' : 'Detallada'}</span>
+						</a>
+					))}
+				</div>
+			)
+		}
+	</section>
+</AppShell>

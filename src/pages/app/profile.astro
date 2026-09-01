@@ -1,0 +1,74 @@
+---
+import AppShell from '../../layouts/AppShell.astro';
+import GroupsPanel from '../../components/GroupsPanel';
+
+const { user } = Astro.locals;
+---
+
+<AppShell title="Perfil — RecApp" active="profile">
+	<header class="flex flex-col items-center gap-2 px-6 pt-10 pb-6">
+		<div class="flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-cyan-400 font-display text-3xl font-extrabold text-white shadow-lg shadow-blue-500/30">
+			{user?.name?.[0]?.toUpperCase()}
+		</div>
+		<h1 class="font-display text-xl font-extrabold text-slate-900">{user?.name}</h1>
+		<p class="text-sm text-slate-500">{user?.email}</p>
+	</header>
+
+	<section class="flex flex-col gap-4 px-6">
+		<form id="profile-form" class="flex flex-col gap-3 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-sky-100">
+			<label class="flex flex-col gap-1 text-sm font-semibold text-slate-700">
+				Nombre
+				<input
+					name="name"
+					value={user?.name}
+					required
+					class="rounded-2xl border-2 border-sky-100 bg-white px-4 py-3 font-medium text-slate-900 outline-none transition focus:border-blue-500"
+				/>
+			</label>
+			<button
+				type="submit"
+				class="rounded-2xl bg-blue-600 px-4 py-3 font-bold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700 active:scale-[0.98]"
+			>
+				Guardar cambios
+			</button>
+		</form>
+
+		<GroupsPanel client:load />
+
+		<button
+			id="logout-btn"
+			class="rounded-2xl border-2 border-red-100 px-4 py-3 text-center font-semibold text-red-500 hover:bg-red-50"
+		>
+			Cerrar sesión
+		</button>
+	</section>
+
+	<script>
+		import { toast } from 'sonner';
+
+		const form = document.getElementById('profile-form') as HTMLFormElement;
+
+		form.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			const data = Object.fromEntries(new FormData(form));
+
+			const res = await fetch('/api/profile', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(data),
+			});
+
+			const body = await res.json().catch(() => ({}));
+			if (res.ok) {
+				toast.success('Perfil actualizado');
+			} else {
+				toast.error(body.error ?? 'Algo ha ido mal.');
+			}
+		});
+
+		document.getElementById('logout-btn')?.addEventListener('click', async () => {
+			await fetch('/api/auth/logout', { method: 'POST' });
+			window.location.href = '/login';
+		});
+	</script>
+</AppShell>

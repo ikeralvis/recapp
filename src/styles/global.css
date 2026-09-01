@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+@theme {
+	--font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
+	--font-display: "Baloo 2", "Nunito", ui-sans-serif, system-ui, sans-serif;
+}

@@ -1,0 +1,80 @@
+---
+import AppShell from '../../../layouts/AppShell.astro';
+import { eq } from 'drizzle-orm';
+import { db } from '../../../db/client';
+import { groupInvites, groups, users } from '../../../db/schema';
+import { isGroupMember } from '../../../lib/group';
+import { UserPlus } from '@lucide/astro';
+
+const token = Astro.params.token ?? '';
+const userId = Astro.locals.user!.id;
+
+const invite = await db.select().from(groupInvites).where(eq(groupInvites.token, token)).get();
+const group = invite ? await db.select().from(groups).where(eq(groups.id, invite.groupId)).get() : null;
+const inviter = invite ? await db.select().from(users).where(eq(users.id, invite.createdBy)).get() : null;
+
+const alreadyMember = invite ? await isGroupMember(invite.groupId, userId) : false;
+const expired = invite ? invite.expiresAt.getTime() < Date.now() : false;
+const used = invite ? !!invite.usedBy : false;
+---
+
+<AppShell title="Invitación — RecApp" active="profile">
+	<section class="flex min-h-[70vh] flex-col items-center justify-center gap-4 px-6 text-center">
+		{
+			!invite || !group ? (
+				<p class="text-slate-500">Esta invitación no existe o ha sido eliminada.</p>
+			) : alreadyMember ? (
+				<>
+					<p class="font-display text-lg font-bold text-slate-800">Ya eres parte de "{group.name}"</p>
+					<a href="/app/profile" class="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-600/30">
+						Ir a mi perfil
+					</a>
+				</>
+			) : used ? (
+				<p class="text-slate-500">Esta invitación ya se ha usado.</p>
+			) : expired ? (
+				<p class="text-slate-500">Esta invitación ha caducado. Pide un link nuevo.</p>
+			) : (
+				<>
+					<span class="flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+						<UserPlus size={26} />
+					</span>
+					<p class="font-display text-lg font-bold text-slate-800">
+						{inviter?.name ?? 'Alguien'} te invita a "{group.name}"
+					</p>
+					<p class="text-sm text-slate-500">Al unirte podréis compartir categorías y comparar estadísticas.</p>
+					<button
+						id="accept-btn"
+						data-token={token}
+						class="rounded-full bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/30"
+					>
+						Unirme al grupo
+					</button>
+				</>
+			)
+		}
+	</section>
+
+	<script>
+		import { setFlashMessage } from '../../../lib/flash';
+
+		document.getElementById('accept-btn')?.addEventListener('click', async (e) => {
+			const btn = e.currentTarget as HTMLButtonElement;
+			btn.disabled = true;
+			btn.textContent = 'Uniéndote…';
+
+			const res = await fetch(`/api/invites/${btn.dataset.token}/accept`, { method: 'POST' });
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				btn.disabled = false;
+				btn.textContent = 'Unirme al grupo';
+				const { toast } = await import('sonner');
+				toast.error(body.error ?? 'No se ha podido unir al grupo.');
+				return;
+			}
+
+			setFlashMessage('¡Te has unido al grupo!');
+			window.location.href = '/app/profile';
+		});
+	</script>
+</AppShell>

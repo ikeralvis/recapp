@@ -1,0 +1,23 @@
+---
+import AppShell from '../../layouts/AppShell.astro';
+import { Trophy } from '@lucide/astro';
+---
+
+<AppShell title="Estadísticas — RecApp" active="stats">
+	<header class="px-6 pt-8 pb-5">
+		<h1 class="font-display text-2xl font-extrabold text-slate-900">Estadísticas</h1>
+		<p class="text-sm text-slate-500">Tu recap y comparativas con tu grupo</p>
+	</header>
+
+	<section class="px-6">
+		<div class="flex flex-col items-center gap-3 rounded-3xl bg-white px-6 py-12 text-center shadow-sm ring-1 ring-sky-100">
+			<span class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+				<Trophy size={24} />
+			</span>
+			<p class="font-display text-lg font-bold text-slate-800">Muy pronto</p>
+			<p class="text-sm text-slate-500">
+				Aquí verás tu resumen anual estilo Wrapped, con comparativas frente a tu pareja o amigos.
+			</p>
+		</div>
+	</section>
+</AppShell>

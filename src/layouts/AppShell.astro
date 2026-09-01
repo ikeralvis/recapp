@@ -1,0 +1,48 @@
+---
+import Layout from './Layout.astro';
+import { House, Trophy, Plus, User } from '@lucide/astro';
+
+interface Props {
+	title?: string;
+	active: 'home' | 'stats' | 'profile';
+}
+
+const { title = 'RecApp', active } = Astro.props;
+
+const tabs = [
+	{ id: 'home', href: '/app', label: 'Home', Icon: House },
+	{ id: 'stats', href: '/app/stats', label: 'Ranking', Icon: Trophy },
+	{ id: 'add', href: '/app/log', label: 'Añadir', Icon: Plus },
+	{ id: 'profile', href: '/app/profile', label: 'Perfil', Icon: User },
+] as const;
+---
+
+<Layout title={title}>
+	<div class="mx-auto min-h-screen max-w-md bg-sky-50 pb-24">
+		<slot />
+	</div>
+
+	<nav class="fixed inset-x-0 bottom-0 z-20 mx-auto grid max-w-md grid-cols-4 items-center bg-white/95 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-4px_20px_rgba(15,23,42,0.08)] backdrop-blur">
+		{
+			tabs.map((tab) => (
+				<a href={tab.href} class="flex flex-col items-center gap-1 py-1.5 text-[11px] font-semibold">
+					<span
+						class:list={[
+							'flex h-9 w-9 items-center justify-center rounded-full transition',
+							tab.id === 'add'
+								? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+								: active === tab.id
+									? 'bg-blue-50 text-blue-600'
+									: 'text-slate-400',
+						]}
+					>
+						<tab.Icon size={20} stroke-width={2.25} />
+					</span>
+					<span class:list={[tab.id === 'add' || active === tab.id ? 'text-blue-600' : 'text-slate-400']}>
+						{tab.label}
+					</span>
+				</a>
+			))
+		}
+	</nav>
+</Layout>

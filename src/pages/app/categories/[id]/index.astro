@@ -1,0 +1,68 @@
+---
+import AppShell from '../../../../layouts/AppShell.astro';
+import CategoryIcon from '../../../../components/CategoryIcon.astro';
+import CounterButton from '../../../../components/CounterButton';
+import EntryForm from '../../../../components/EntryForm';
+import EntryHistory from '../../../../components/EntryHistory';
+import { ArrowLeft, Pencil } from '@lucide/astro';
+import { eq, sql } from 'drizzle-orm';
+import { db } from '../../../../db/client';
+import { categories, entries } from '../../../../db/schema';
+import { canAccessCategory } from '../../../../lib/categoryAccess';
+import type { CategoryField } from '../../../../lib/categoryField';
+
+const userId = Astro.locals.user!.id;
+const id = Number(Astro.params.id);
+
+const category = Number.isInteger(id) ? await db.select().from(categories).where(eq(categories.id, id)).get() : null;
+
+if (!category || !(await canAccessCategory(userId, category))) {
+	return Astro.redirect('/app/categories');
+}
+
+const fields = category.kind === 'detailed' ? (category.schemaJson as unknown as CategoryField[]) : [];
+
+const totalResult =
+	category.kind === 'counter'
+		? await db.select({ count: sql<number>`count(*)` }).from(entries).where(eq(entries.categoryId, category.id)).get()
+		: null;
+---
+
+<AppShell title={`${category.name} — RecApp`} active="home">
+	<header class="flex items-center justify-between px-6 pt-8 pb-5">
+		<a href="/app/categories" class="inline-flex items-center gap-1 text-sm font-semibold text-blue-600">
+			<ArrowLeft size={16} /> Mis categorías
+		</a>
+		<a href={`/app/categories/${category.id}/edit`} class="rounded-full bg-white p-2 text-slate-500 shadow-sm ring-1 ring-sky-100">
+			<Pencil size={16} />
+		</a>
+	</header>
+
+	<section class="flex flex-col gap-5 px-6 pb-6">
+		<div class="flex items-center gap-3">
+			<span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+				<CategoryIcon name={category.icon} class="h-6 w-6" />
+			</span>
+			<h1 class="font-display text-2xl font-extrabold text-slate-900">{category.name}</h1>
+		</div>
+
+		{
+			category.kind === 'counter' ? (
+				<CounterButton client:load categoryId={category.id} initialTotal={totalResult?.count ?? 0} />
+			) : (
+				<EntryForm client:load categoryId={category.id} fields={fields} />
+			)
+		}
+
+		<div class="flex flex-col gap-2">
+			<p class="text-sm font-semibold text-slate-700">Historial</p>
+			<EntryHistory
+				client:load
+				categoryId={category.id}
+				fields={fields}
+				showAuthor={category.ownerType === 'group'}
+				currentUserId={userId}
+			/>
+		</div>
+	</section>
+</AppShell>

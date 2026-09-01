@@ -1,0 +1,88 @@
+---
+import AppShell from '../../layouts/AppShell.astro';
+import CategoryIcon from '../../components/CategoryIcon.astro';
+import { ArrowLeft, Users } from '@lucide/astro';
+import { listAccessibleCategories } from '../../lib/categoryAccess';
+
+const userId = Astro.locals.user!.id;
+const myCategories = await listAccessibleCategories(userId);
+---
+
+<AppShell title="Registrar — RecApp" active="home">
+	<header class="px-6 pt-8 pb-5">
+		<a href="/app" class="inline-flex items-center gap-1 text-sm font-semibold text-blue-600">
+			<ArrowLeft size={16} /> Volver
+		</a>
+		<h1 class="font-display text-2xl font-extrabold text-slate-900">¿Qué registras?</h1>
+		<p class="text-sm text-slate-500">Toca un contador para sumar +1 al momento</p>
+	</header>
+
+	<section class="px-6">
+		{
+			myCategories.length === 0 ? (
+				<p class="rounded-3xl bg-white px-4 py-8 text-center text-sm text-slate-500 shadow-sm ring-1 ring-sky-100">
+					Todavía no tienes categorías.{' '}
+					<a href="/app/categories/new" class="font-semibold text-blue-600">
+						Crea una
+					</a>
+				</p>
+			) : (
+				<div class="grid grid-cols-2 gap-3">
+					{myCategories.map((c) => (
+						<button
+							type="button"
+							data-category-id={c.id}
+							data-kind={c.kind}
+							class="log-category-btn flex flex-col gap-1 rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-sky-100 transition active:scale-[0.97]"
+						>
+							<div class="flex items-center justify-between">
+								<span class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+									<CategoryIcon name={c.icon} class="h-5 w-5" />
+								</span>
+								{c.ownerType === 'group' && <Users size={14} class="text-slate-400" />}
+							</div>
+							<span class="font-semibold text-slate-800">{c.name}</span>
+							<span class="text-xs font-medium text-slate-400">
+								{c.kind === 'counter' ? 'Toca para +1' : 'Abrir formulario'}
+							</span>
+						</button>
+					))}
+				</div>
+			)
+		}
+	</section>
+
+	<script>
+		import { toast } from 'sonner';
+		import { setFlashMessage } from '../../lib/flash';
+
+		document.querySelectorAll<HTMLButtonElement>('.log-category-btn').forEach((btn) => {
+			btn.addEventListener('click', async () => {
+				const categoryId = btn.dataset.categoryId;
+				const kind = btn.dataset.kind;
+
+				if (kind !== 'counter') {
+					window.location.href = `/app/categories/${categoryId}`;
+					return;
+				}
+
+				btn.disabled = true;
+				const res = await fetch('/api/entries', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ categoryId: Number(categoryId) }),
+				});
+				btn.disabled = false;
+
+				if (!res.ok) {
+					const body = await res.json().catch(() => ({}));
+					toast.error(body.error ?? 'No se ha podido registrar.');
+					return;
+				}
+
+				setFlashMessage('+1 registrado');
+				window.location.href = '/app';
+			});
+		});
+	</script>
+</AppShell>
