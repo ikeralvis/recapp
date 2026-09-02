@@ -46,6 +46,7 @@ export const categories = sqliteTable('categories', {
 	ownerId: integer('owner_id').notNull(),
 	name: text('name').notNull(),
 	icon: text('icon'),
+	color: text('color').notNull().default('blue'),
 	kind: text('kind', { enum: ['counter', 'detailed'] }).notNull(),
 	visibility: text('visibility', { enum: ['individual', 'shared'] }).notNull(),
 	schemaJson: text('schema_json', { mode: 'json' }).notNull().default('[]'),

@@ -5,6 +5,7 @@ import { categories } from '../../../db/schema';
 import { validateFields } from '../../../lib/categoryField';
 import { canAccessCategory } from '../../../lib/categoryAccess';
 import { isGroupMember } from '../../../lib/group';
+import { isAvatarColor } from '../../../lib/avatarColors';
 
 export const prerender = false;
 
@@ -43,6 +44,7 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 	const body = await request.json().catch(() => null);
 	const name = typeof body?.name === 'string' ? body.name.trim() : '';
 	const icon = typeof body?.icon === 'string' ? body.icon.trim() : null;
+	const color = typeof body?.color === 'string' && isAvatarColor(body.color) ? body.color : category.color;
 	const fields = body?.fields ?? [];
 
 	if (!name) {
@@ -74,6 +76,7 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 		.set({
 			name,
 			icon,
+			color,
 			schemaJson: category.kind === 'detailed' ? fields : [],
 			ownerType,
 			ownerId,

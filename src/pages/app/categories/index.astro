@@ -3,9 +3,14 @@ import AppShell from '../../../layouts/AppShell.astro';
 import CategoryIcon from '../../../components/CategoryIcon.astro';
 import { ArrowLeft, Plus, Users } from '@lucide/astro';
 import { listAccessibleCategories } from '../../../lib/categoryAccess';
+import { AVATAR_COLORS, isAvatarColor, DEFAULT_AVATAR_COLOR } from '../../../lib/avatarColors';
 
 const userId = Astro.locals.user!.id;
 const myCategories = await listAccessibleCategories(userId);
+
+function cardGradient(color: string) {
+	return isAvatarColor(color) ? AVATAR_COLORS[color] : AVATAR_COLORS[DEFAULT_AVATAR_COLOR];
+}
 ---
 
 <AppShell title="Mis categorías — RecApp" active="home">
@@ -38,7 +43,9 @@ const myCategories = await listAccessibleCategories(userId);
 							class="flex flex-col gap-1 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-sky-100 transition hover:ring-blue-300"
 						>
 							<div class="flex items-center justify-between">
-								<span class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+								<span
+									class={`flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br text-white ${cardGradient(c.color)}`}
+								>
 									<CategoryIcon name={c.icon} class="h-5 w-5" />
 								</span>
 								{c.ownerType === 'group' && <Users size={14} class="text-slate-400" />}

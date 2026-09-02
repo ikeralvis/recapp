@@ -31,6 +31,7 @@ if (!category || !(await canAccessCategory(userId, category))) {
 					id: category.id,
 					name: category.name,
 					icon: category.icon ?? '',
+					color: category.color,
 					kind: category.kind,
 					ownerType: category.ownerType,
 					groupId: category.ownerType === 'group' ? category.ownerId : null,

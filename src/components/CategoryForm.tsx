@@ -4,6 +4,7 @@ import IconPicker from './IconPicker';
 import { DEFAULT_CATEGORY_ICON } from '../lib/categoryIcons';
 import { setFlashMessage } from '../lib/flash';
 import { getCachedGroups, setCachedGroups } from '../lib/groupsCache';
+import { AVATAR_COLORS, DEFAULT_AVATAR_COLOR, type AvatarColor } from '../lib/avatarColors';
 
 type FieldType = 'text' | 'text_long' | 'number' | 'select' | 'photo' | 'date';
 type OwnerType = 'user' | 'group';
@@ -26,6 +27,7 @@ interface CategoryData {
 	id?: number;
 	name: string;
 	icon: string;
+	color?: string;
 	kind: 'counter' | 'detailed';
 	ownerType?: OwnerType;
 	groupId?: number | null;
@@ -58,6 +60,9 @@ export default function CategoryForm({ initial }: { initial?: CategoryData }) {
 	const lockedGroup = isEdit && initial?.ownerType === 'group';
 	const [name, setName] = useState(initial?.name ?? '');
 	const [icon, setIcon] = useState(initial?.icon ?? DEFAULT_CATEGORY_ICON);
+	const [color, setColor] = useState<AvatarColor>(
+		initial?.color && initial.color in AVATAR_COLORS ? (initial.color as AvatarColor) : DEFAULT_AVATAR_COLOR
+	);
 	const [kind, setKind] = useState<'counter' | 'detailed'>(initial?.kind ?? 'counter');
 	const [fields, setFields] = useState<CategoryField[]>(initial?.fields ?? []);
 	const [error, setError] = useState<string | null>(null);
@@ -165,6 +170,7 @@ export default function CategoryForm({ initial }: { initial?: CategoryData }) {
 		const payload = {
 			name: name.trim(),
 			icon: icon.trim(),
+			color,
 			kind,
 			ownerType,
 			groupId: ownerType === 'group' ? groupId : undefined,
@@ -197,6 +203,23 @@ export default function CategoryForm({ initial }: { initial?: CategoryData }) {
 	return (
 		<form onSubmit={handleSubmit} className="flex flex-col gap-5">
 			<IconPicker value={icon} onChange={setIcon} />
+
+			<div className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
+				Color
+				<div className="flex gap-2">
+					{Object.entries(AVATAR_COLORS).map(([key, gradient]) => (
+						<button
+							key={key}
+							type="button"
+							aria-label={key}
+							onClick={() => setColor(key as AvatarColor)}
+							className={`h-9 w-9 rounded-full bg-linear-to-br transition ${gradient} ${
+								color === key ? 'ring-2 ring-offset-2 ring-blue-500' : ''
+							}`}
+						/>
+					))}
+				</div>
+			</div>
 
 			<label className="flex flex-col gap-1 text-sm font-semibold text-slate-700">
 				Nombre

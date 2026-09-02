@@ -35,6 +35,7 @@ const accentColor = isAvatarColor(rawAccent) ? rawAccent : DEFAULT_AVATAR_COLOR;
 		<title>{title}</title>
 	</head>
 	<body class="min-h-screen bg-sky-50 font-sans text-slate-900">
+		<div id="recapp-progress"></div>
 		<slot />
 		<Toaster client:load />
 		<script>
@@ -43,6 +44,25 @@ const accentColor = isAvatarColor(rawAccent) ? rawAccent : DEFAULT_AVATAR_COLOR;
 					// el registro puede fallar en navegadores sin soporte; no es crítico
 				});
 			}
+
+			const bar = document.getElementById('recapp-progress');
+			let showTimer: ReturnType<typeof setTimeout> | undefined;
+
+			document.addEventListener('astro:before-preparation', () => {
+				// Solo se muestra si la navegación tarda más de 150ms: evita el
+				// parpadeo en transiciones rápidas dentro de la misma red local.
+				showTimer = setTimeout(() => {
+					bar?.classList.remove('is-done');
+					bar?.classList.add('is-active');
+				}, 150);
+			});
+
+			document.addEventListener('astro:after-swap', () => {
+				clearTimeout(showTimer);
+				bar?.classList.remove('is-active');
+				bar?.classList.add('is-done');
+				setTimeout(() => bar?.classList.remove('is-done'), 250);
+			});
 		</script>
 	</body>
 </html>

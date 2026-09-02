@@ -4,6 +4,7 @@ import { categories } from '../../../db/schema';
 import { validateFields } from '../../../lib/categoryField';
 import { listAccessibleCategories } from '../../../lib/categoryAccess';
 import { isGroupMember } from '../../../lib/group';
+import { isAvatarColor, DEFAULT_AVATAR_COLOR } from '../../../lib/avatarColors';
 
 export const prerender = false;
 
@@ -23,6 +24,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	const body = await request.json().catch(() => null);
 	const name = typeof body?.name === 'string' ? body.name.trim() : '';
 	const icon = typeof body?.icon === 'string' ? body.icon.trim() : null;
+	const color = typeof body?.color === 'string' && isAvatarColor(body.color) ? body.color : DEFAULT_AVATAR_COLOR;
 	const kind = body?.kind === 'counter' || body?.kind === 'detailed' ? body.kind : null;
 	const fields = body?.fields ?? [];
 	const ownerType = body?.ownerType === 'group' ? 'group' : 'user';
@@ -50,6 +52,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			ownerId: ownerType === 'group' ? groupId : locals.user.id,
 			name,
 			icon,
+			color,
 			kind,
 			visibility,
 			schemaJson: kind === 'detailed' ? fields : [],

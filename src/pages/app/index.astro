@@ -8,6 +8,7 @@ import { db } from '../../db/client';
 import { entries } from '../../db/schema';
 import { and, eq, gte, inArray, sql } from 'drizzle-orm';
 import type { CategoryField } from '../../lib/categoryField';
+import { AVATAR_COLORS, isAvatarColor, DEFAULT_AVATAR_COLOR } from '../../lib/avatarColors';
 
 const userId = Astro.locals.user!.id;
 const myCategories = await listAccessibleCategories(userId);
@@ -46,14 +47,9 @@ const detailedCategoriesData = myCategories
 		fields: c.schemaJson as unknown as CategoryField[],
 	}));
 
-const CARD_STYLES = [
-	'from-blue-500 to-cyan-400',
-	'from-violet-500 to-fuchsia-400',
-	'from-amber-500 to-orange-400',
-	'from-emerald-500 to-teal-400',
-	'from-rose-500 to-pink-400',
-	'from-indigo-500 to-sky-400',
-];
+function cardGradient(color: string) {
+	return isAvatarColor(color) ? AVATAR_COLORS[color] : AVATAR_COLORS[DEFAULT_AVATAR_COLOR];
+}
 ---
 
 <AppShell title="RecApp" active="home">
@@ -88,13 +84,13 @@ const CARD_STYLES = [
 				</div>
 			) : (
 				<div class="grid grid-cols-2 gap-3">
-					{myCategories.map((c, i) =>
+					{myCategories.map((c) =>
 						c.kind === 'counter' ? (
 							<button
 								type="button"
 								data-counter-card
 								data-category-id={c.id}
-								class={`quick-counter-card relative flex flex-col gap-2 rounded-3xl bg-linear-to-br p-4 text-left text-white shadow-lg transition active:scale-[0.97] ${CARD_STYLES[i % CARD_STYLES.length]}`}
+								class={`quick-counter-card relative flex flex-col gap-2 rounded-3xl bg-linear-to-br p-4 text-left text-white shadow-lg transition active:scale-[0.97] ${cardGradient(c.color)}`}
 							>
 								<CategoryIcon name={c.icon} class="h-7 w-7" />
 								<span class="flex items-center gap-1 font-display font-bold leading-tight">
@@ -120,7 +116,7 @@ const CARD_STYLES = [
 								type="button"
 								data-quick-add-card
 								data-category-id={c.id}
-								class={`relative flex flex-col gap-2 rounded-3xl bg-linear-to-br p-4 text-left text-white shadow-lg transition active:scale-[0.97] ${CARD_STYLES[i % CARD_STYLES.length]}`}
+								class={`relative flex flex-col gap-2 rounded-3xl bg-linear-to-br p-4 text-left text-white shadow-lg transition active:scale-[0.97] ${cardGradient(c.color)}`}
 							>
 								<CategoryIcon name={c.icon} class="h-7 w-7" />
 								<span class="flex items-center gap-1 font-display font-bold leading-tight">
@@ -148,19 +144,26 @@ const CARD_STYLES = [
 	<script>
 		import { toast } from 'sonner';
 
-		document.querySelectorAll<HTMLButtonElement>('[data-quick-add-card]').forEach((card) => {
-			card.addEventListener('click', (e) => {
-				if ((e.target as HTMLElement).closest('a')) return;
-				window.dispatchEvent(new CustomEvent('recapp:open-quick-add', { detail: { categoryId: Number(card.dataset.categoryId) } }));
-			});
-		});
+		// Delegado en document (no en cada card): así sigue funcionando tras cada
+		// navegación con View Transitions, que reemplaza el DOM pero no re-ejecuta
+		// este script. Antes, con listeners por card, dejaba de abrir el popup
+		// en móvil tras volver a Home desde otra pantalla.
+		document.addEventListener('click', async (e) => {
+			const target = e.target as HTMLElement;
+			if (target.closest('a')) return;
 
-		document.querySelectorAll<HTMLButtonElement>('[data-counter-card]').forEach((card) => {
-			card.addEventListener('click', async (e) => {
-				if ((e.target as HTMLElement).closest('a')) return;
+			const quickAddCard = target.closest<HTMLButtonElement>('[data-quick-add-card]');
+			if (quickAddCard) {
+				window.dispatchEvent(
+					new CustomEvent('recapp:open-quick-add', { detail: { categoryId: Number(quickAddCard.dataset.categoryId) } })
+				);
+				return;
+			}
 
-				const categoryId = card.dataset.categoryId;
-				card.disabled = true;
+			const counterCard = target.closest<HTMLButtonElement>('[data-counter-card]');
+			if (counterCard) {
+				const categoryId = counterCard.dataset.categoryId;
+				counterCard.disabled = true;
 
 				const res = await fetch('/api/entries', {
 					method: 'POST',
@@ -168,7 +171,7 @@ const CARD_STYLES = [
 					body: JSON.stringify({ categoryId: Number(categoryId) }),
 				});
 
-				card.disabled = false;
+				counterCard.disabled = false;
 
 				if (!res.ok) {
 					const body = await res.json().catch(() => ({}));
@@ -176,11 +179,11 @@ const CARD_STYLES = [
 					return;
 				}
 
-				const totalEl = card.querySelector('.quick-counter-total');
+				const totalEl = counterCard.querySelector('.quick-counter-total');
 				const newTotal = totalEl ? Number(totalEl.textContent) + 1 : null;
 				if (totalEl && newTotal !== null) totalEl.textContent = String(newTotal);
 				toast.success(newTotal !== null ? `Hoy: ${newTotal}` : 'Registrado');
-			});
+			}
 		});
 	</script>
 </AppShell>

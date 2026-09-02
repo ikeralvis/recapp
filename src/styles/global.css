@@ -11,6 +11,40 @@ html {
 }
 
 /*
+ * Sin @layer a propósito: las capas de Tailwind (utilities) tienen prioridad
+ * sobre cualquier @layer nuestro, pero una regla suelta como esta gana siempre.
+ * iOS Safari hace zoom automático al enfocar un input/select/textarea con
+ * font-size computado < 16px (p.ej. clases text-sm en un formulario), aunque
+ * la base de la app ya esté en 18px. Forzamos el mínimo aquí para evitarlo.
+ */
+input,
+select,
+textarea {
+	font-size: max(16px, 1em);
+}
+
+/* Barra de carga para navegaciones con View Transitions que tardan (móvil/red lenta). */
+#recapp-progress {
+	position: fixed;
+	top: 0;
+	left: 0;
+	height: 3px;
+	width: 0%;
+	background: var(--color-blue-500);
+	z-index: 100;
+	opacity: 0;
+	transition: width 0.3s ease, opacity 0.2s ease;
+}
+#recapp-progress.is-active {
+	opacity: 1;
+	width: 70%;
+}
+#recapp-progress.is-done {
+	width: 100%;
+	opacity: 0;
+}
+
+/*
  * Color de acento por usuario: en vez de tocar cada clase bg-blue-*/text-blue-*/from-blue-*
  * del proyecto, redirigimos las variables CSS que genera Tailwind para "blue" y "cyan"
  * (los dos tonos que usa la app como marca) hacia otra pareja de colores del propio
