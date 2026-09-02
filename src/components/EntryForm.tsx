@@ -2,8 +2,14 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import type { CategoryField } from '../lib/categoryField';
 
+function todayLocal() {
+	const now = new Date();
+	return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
 export default function EntryForm({ categoryId, fields }: { categoryId: number; fields: CategoryField[] }) {
 	const [values, setValues] = useState<Record<string, string>>({});
+	const [occurredAt, setOccurredAt] = useState(todayLocal());
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 	const visibleFields = fields.filter((f) => f.type !== 'photo');
@@ -28,7 +34,7 @@ export default function EntryForm({ categoryId, fields }: { categoryId: number; 
 			const res = await fetch('/api/entries', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ categoryId, data }),
+				body: JSON.stringify({ categoryId, data, occurredAt: `${occurredAt}T12:00:00` }),
 			});
 
 			if (!res.ok) {
@@ -40,6 +46,7 @@ export default function EntryForm({ categoryId, fields }: { categoryId: number; 
 
 			toast.success('Registrado');
 			setValues({});
+			setOccurredAt(todayLocal());
 			setLoading(false);
 			window.dispatchEvent(new CustomEvent('recapp:entry-created'));
 		} catch {
@@ -84,6 +91,17 @@ export default function EntryForm({ categoryId, fields }: { categoryId: number; 
 					)}
 				</label>
 			))}
+
+			<label className="flex flex-col gap-1 text-sm font-semibold text-slate-700">
+				Fecha
+				<input
+					type="date"
+					value={occurredAt}
+					max={todayLocal()}
+					onChange={(e) => setOccurredAt(e.target.value)}
+					className="rounded-xl border-2 border-sky-100 px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:border-blue-500"
+				/>
+			</label>
 
 			{error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{error}</p>}
 

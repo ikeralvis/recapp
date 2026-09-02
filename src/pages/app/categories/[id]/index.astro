@@ -5,10 +5,10 @@ import CounterButton from '../../../../components/CounterButton';
 import EntryForm from '../../../../components/EntryForm';
 import EntryHistory from '../../../../components/EntryHistory';
 import { ArrowLeft, Pencil } from '@lucide/astro';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, gte, sql } from 'drizzle-orm';
 import { db } from '../../../../db/client';
 import { categories, entries } from '../../../../db/schema';
-import { canAccessCategory } from '../../../../lib/categoryAccess';
+import { canAccessCategory, isPersonalView } from '../../../../lib/categoryAccess';
 import type { CategoryField } from '../../../../lib/categoryField';
 
 const userId = Astro.locals.user!.id;
@@ -21,11 +21,26 @@ if (!category || !(await canAccessCategory(userId, category))) {
 }
 
 const fields = category.kind === 'detailed' ? (category.schemaJson as unknown as CategoryField[]) : [];
+const personalOnly = isPersonalView(category);
 
-const totalResult =
-	category.kind === 'counter'
-		? await db.select({ count: sql<number>`count(*)` }).from(entries).where(eq(entries.categoryId, category.id)).get()
-		: null;
+let todayTotal = 0;
+let lifetimeTotal = 0;
+if (category.kind === 'counter') {
+	const startOfToday = new Date();
+	startOfToday.setHours(0, 0, 0, 0);
+
+	const scopeCondition = personalOnly ? and(eq(entries.categoryId, category.id), eq(entries.userId, userId)) : eq(entries.categoryId, category.id);
+
+	const lifetimeResult = await db.select({ count: sql<number>`count(*)` }).from(entries).where(scopeCondition).get();
+	const todayResult = await db
+		.select({ count: sql<number>`count(*)` })
+		.from(entries)
+		.where(and(scopeCondition, gte(entries.occurredAt, startOfToday)))
+		.get();
+
+	lifetimeTotal = lifetimeResult?.count ?? 0;
+	todayTotal = todayResult?.count ?? 0;
+}
 ---
 
 <AppShell title={`${category.name} — RecApp`} active="home">
@@ -48,19 +63,19 @@ const totalResult =
 
 		{
 			category.kind === 'counter' ? (
-				<CounterButton client:load categoryId={category.id} initialTotal={totalResult?.count ?? 0} />
+				<CounterButton client:load categoryId={category.id} initialToday={todayTotal} initialTotal={lifetimeTotal} />
 			) : (
 				<EntryForm client:load categoryId={category.id} fields={fields} />
 			)
 		}
 
 		<div class="flex flex-col gap-2">
-			<p class="text-sm font-semibold text-slate-700">Historial</p>
+			<p class="text-sm font-semibold text-slate-700">{personalOnly ? 'Tu historial' : 'Historial'}</p>
 			<EntryHistory
 				client:load
 				categoryId={category.id}
 				fields={fields}
-				showAuthor={category.ownerType === 'group'}
+				showAuthor={!personalOnly}
 				currentUserId={userId}
 			/>
 		</div>

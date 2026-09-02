@@ -1,0 +1,18 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import WrappedViewer from '../../../components/WrappedViewer';
+import { getWrappedData } from '../../../lib/wrapped';
+
+const userId = Astro.locals.user!.id;
+const year = Astro.params.year ?? '';
+
+if (!/^\d{4}$/.test(year)) {
+	return Astro.redirect('/app/stats');
+}
+
+const data = await getWrappedData(userId, year);
+---
+
+<Layout title={`Tu ${year} — RecApp`}>
+	<WrappedViewer client:load data={data} closeHref="/app/stats" />
+</Layout>

@@ -4,6 +4,7 @@ import { db } from '../../../db/client';
 import { categories } from '../../../db/schema';
 import { validateFields } from '../../../lib/categoryField';
 import { canAccessCategory } from '../../../lib/categoryAccess';
+import { isGroupMember } from '../../../lib/group';
 
 export const prerender = false;
 
@@ -52,12 +53,31 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 		return Response.json({ error: 'Los campos configurados no son válidos.' }, { status: 400 });
 	}
 
+	// Solo se permite convertir Personal -> Grupo, nunca al revés (evitaría huérfanar
+	// datos de otros miembros que ya viven bajo ese grupo).
+	let ownerType = category.ownerType;
+	let ownerId = category.ownerId;
+	let visibility = category.visibility;
+
+	if (category.ownerType === 'user' && body?.ownerType === 'group') {
+		const groupId = Number(body?.groupId);
+		if (!Number.isInteger(groupId) || !(await isGroupMember(groupId, locals.user.id))) {
+			return Response.json({ error: 'Selecciona un grupo del que seas miembro.' }, { status: 400 });
+		}
+		ownerType = 'group';
+		ownerId = groupId;
+		visibility = body?.visibility === 'shared' ? 'shared' : 'individual';
+	}
+
 	const updated = await db
 		.update(categories)
 		.set({
 			name,
 			icon,
 			schemaJson: category.kind === 'detailed' ? fields : [],
+			ownerType,
+			ownerId,
+			visibility,
 		})
 		.where(eq(categories.id, category.id))
 		.returning()

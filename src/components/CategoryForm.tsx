@@ -3,6 +3,7 @@ import { Hash, ClipboardList, X, Plus, User, Users, Columns2, Combine } from 'lu
 import IconPicker from './IconPicker';
 import { DEFAULT_CATEGORY_ICON } from '../lib/categoryIcons';
 import { setFlashMessage } from '../lib/flash';
+import { getCachedGroups, setCachedGroups } from '../lib/groupsCache';
 
 type FieldType = 'text' | 'text_long' | 'number' | 'select' | 'photo' | 'date';
 type OwnerType = 'user' | 'group';
@@ -52,6 +53,9 @@ function slugify(label: string) {
 
 export default function CategoryForm({ initial }: { initial?: CategoryData }) {
 	const isEdit = !!initial?.id;
+	// Una vez es de grupo no se puede "desconvertir" (evita huérfanar datos de otros miembros).
+	// Pero sí se permite pasar de Personal a Grupo en cualquier momento.
+	const lockedGroup = isEdit && initial?.ownerType === 'group';
 	const [name, setName] = useState(initial?.name ?? '');
 	const [icon, setIcon] = useState(initial?.icon ?? DEFAULT_CATEGORY_ICON);
 	const [kind, setKind] = useState<'counter' | 'detailed'>(initial?.kind ?? 'counter');
@@ -69,10 +73,17 @@ export default function CategoryForm({ initial }: { initial?: CategoryData }) {
 	const [creatingGroup, setCreatingGroup] = useState(false);
 
 	useEffect(() => {
+		const cached = getCachedGroups<GroupOption[]>();
+		if (cached) {
+			setGroups(cached);
+			setGroupsLoaded(true);
+		}
+
 		fetch('/api/groups')
 			.then((r) => r.json())
 			.then((data: GroupOption[]) => {
 				setGroups(data);
+				setCachedGroups(data);
 				setGroupsLoaded(true);
 			})
 			.catch(() => setGroupsLoaded(true));
@@ -94,7 +105,11 @@ export default function CategoryForm({ initial }: { initial?: CategoryData }) {
 			return;
 		}
 
-		setGroups((g) => [...g, body]);
+		setGroups((g) => {
+			const next = [...g, body];
+			setCachedGroups(next);
+			return next;
+		});
 		setGroupId(body.id);
 		setNewGroupName('');
 		setShowNewGroup(false);
@@ -198,7 +213,7 @@ export default function CategoryForm({ initial }: { initial?: CategoryData }) {
 				<div className="grid grid-cols-2 gap-2">
 					<button
 						type="button"
-						disabled={isEdit}
+						disabled={lockedGroup}
 						onClick={() => setOwnerType('user')}
 						className={`rounded-2xl border-2 px-4 py-3 text-left font-semibold transition disabled:opacity-50 ${
 							ownerType === 'user' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-sky-100 text-slate-600'
@@ -211,7 +226,7 @@ export default function CategoryForm({ initial }: { initial?: CategoryData }) {
 					</button>
 					<button
 						type="button"
-						disabled={isEdit}
+						disabled={lockedGroup}
 						onClick={() => setOwnerType('group')}
 						className={`rounded-2xl border-2 px-4 py-3 text-left font-semibold transition disabled:opacity-50 ${
 							ownerType === 'group' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-sky-100 text-slate-600'
@@ -239,7 +254,7 @@ export default function CategoryForm({ initial }: { initial?: CategoryData }) {
 								<button
 									key={g.id}
 									type="button"
-									disabled={isEdit}
+									disabled={lockedGroup}
 									onClick={() => setGroupId(g.id)}
 									className={`rounded-full border-2 px-3 py-1.5 text-sm font-semibold transition disabled:opacity-50 ${
 										groupId === g.id ? 'border-blue-500 bg-blue-100 text-blue-700' : 'border-sky-100 bg-white text-slate-600'
@@ -251,7 +266,7 @@ export default function CategoryForm({ initial }: { initial?: CategoryData }) {
 						</div>
 					)}
 
-					{!isEdit &&
+					{!lockedGroup &&
 						(showNewGroup ? (
 							<div className="flex gap-2">
 								<input
@@ -287,7 +302,7 @@ export default function CategoryForm({ initial }: { initial?: CategoryData }) {
 					<div className="grid grid-cols-2 gap-2">
 						<button
 							type="button"
-							disabled={isEdit}
+							disabled={lockedGroup}
 							onClick={() => setVisibility('individual')}
 							className={`rounded-2xl border-2 px-4 py-3 text-left font-semibold transition disabled:opacity-50 ${
 								visibility === 'individual' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-sky-100 text-slate-600'
@@ -300,7 +315,7 @@ export default function CategoryForm({ initial }: { initial?: CategoryData }) {
 						</button>
 						<button
 							type="button"
-							disabled={isEdit}
+							disabled={lockedGroup}
 							onClick={() => setVisibility('shared')}
 							className={`rounded-2xl border-2 px-4 py-3 text-left font-semibold transition disabled:opacity-50 ${
 								visibility === 'shared' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-sky-100 text-slate-600'

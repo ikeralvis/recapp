@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { db } from '../../../db/client';
 import { categories, entries, users } from '../../../db/schema';
-import { canAccessCategory } from '../../../lib/categoryAccess';
+import { canAccessCategory, isPersonalView } from '../../../lib/categoryAccess';
 import { validateEntryData } from '../../../lib/entryData';
 import type { CategoryField } from '../../../lib/categoryField';
 
@@ -23,6 +23,8 @@ export const GET: APIRoute = async ({ url, locals }) => {
 		return Response.json({ error: 'Categoría no encontrada.' }, { status: 404 });
 	}
 
+	const personalOnly = isPersonalView(category);
+
 	const rows = await db
 		.select({
 			id: entries.id,
@@ -34,7 +36,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
 		})
 		.from(entries)
 		.innerJoin(users, eq(users.id, entries.userId))
-		.where(eq(entries.categoryId, categoryId))
+		.where(personalOnly ? and(eq(entries.categoryId, categoryId), eq(entries.userId, locals.user.id)) : eq(entries.categoryId, categoryId))
 		.orderBy(desc(entries.occurredAt))
 		.limit(100);
 

@@ -19,3 +19,10 @@ export async function canAccessCategory(userId: number, category: { ownerType: '
 	if (category.ownerType === 'user') return category.ownerId === userId;
 	return isGroupMember(category.ownerId, userId);
 }
+
+/** El historial/contador de la categoría solo muestra lo del propio usuario cuando es
+ * personal, o de grupo con visibilidad "individual". La comparativa entre miembros
+ * vive únicamente en Estadísticas. */
+export function isPersonalView(category: { ownerType: 'user' | 'group'; visibility: 'individual' | 'shared' }) {
+	return category.ownerType === 'user' || category.visibility === 'individual';
+}

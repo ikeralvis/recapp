@@ -1,11 +1,50 @@
 ---
 import AppShell from '../../layouts/AppShell.astro';
 import CategoryIcon from '../../components/CategoryIcon.astro';
-import { Sparkles, Users } from '@lucide/astro';
-import { listAccessibleCategories } from '../../lib/categoryAccess';
+import QuickAddModal from '../../components/QuickAddModal';
+import { Sparkles, Users, History } from '@lucide/astro';
+import { listAccessibleCategories, isPersonalView } from '../../lib/categoryAccess';
+import { db } from '../../db/client';
+import { entries } from '../../db/schema';
+import { and, eq, gte, inArray, sql } from 'drizzle-orm';
+import type { CategoryField } from '../../lib/categoryField';
 
 const userId = Astro.locals.user!.id;
 const myCategories = await listAccessibleCategories(userId);
+
+const startOfToday = new Date();
+startOfToday.setHours(0, 0, 0, 0);
+
+const counterCategories = myCategories.filter((c) => c.kind === 'counter');
+const personalIds = counterCategories.filter((c) => isPersonalView(c)).map((c) => c.id);
+const sharedIds = counterCategories.filter((c) => !isPersonalView(c)).map((c) => c.id);
+
+const countByCategory = new Map<number, number>();
+if (personalIds.length) {
+	const rows = await db
+		.select({ categoryId: entries.categoryId, total: sql<number>`count(*)` })
+		.from(entries)
+		.where(and(inArray(entries.categoryId, personalIds), eq(entries.userId, userId), gte(entries.occurredAt, startOfToday)))
+		.groupBy(entries.categoryId);
+	for (const r of rows) countByCategory.set(r.categoryId, r.total);
+}
+if (sharedIds.length) {
+	const rows = await db
+		.select({ categoryId: entries.categoryId, total: sql<number>`count(*)` })
+		.from(entries)
+		.where(and(inArray(entries.categoryId, sharedIds), gte(entries.occurredAt, startOfToday)))
+		.groupBy(entries.categoryId);
+	for (const r of rows) countByCategory.set(r.categoryId, r.total);
+}
+
+const detailedCategoriesData = myCategories
+	.filter((c) => c.kind === 'detailed')
+	.map((c) => ({
+		id: c.id,
+		name: c.name,
+		icon: c.icon,
+		fields: c.schemaJson as unknown as CategoryField[],
+	}));
 
 const CARD_STYLES = [
 	'from-blue-500 to-cyan-400',
@@ -49,21 +88,99 @@ const CARD_STYLES = [
 				</div>
 			) : (
 				<div class="grid grid-cols-2 gap-3">
-					{myCategories.map((c, i) => (
-						<a
-							href={`/app/categories/${c.id}`}
-							class={`flex flex-col gap-2 rounded-3xl bg-linear-to-br p-4 text-white shadow-lg transition active:scale-[0.97] ${CARD_STYLES[i % CARD_STYLES.length]}`}
-						>
-							<div class="flex items-center justify-between">
+					{myCategories.map((c, i) =>
+						c.kind === 'counter' ? (
+							<button
+								type="button"
+								data-counter-card
+								data-category-id={c.id}
+								class={`quick-counter-card relative flex flex-col gap-2 rounded-3xl bg-linear-to-br p-4 text-left text-white shadow-lg transition active:scale-[0.97] ${CARD_STYLES[i % CARD_STYLES.length]}`}
+							>
 								<CategoryIcon name={c.icon} class="h-7 w-7" />
-								{c.ownerType === 'group' && <Users size={14} class="text-white/80" />}
-							</div>
-							<span class="font-display font-bold leading-tight">{c.name}</span>
-							<span class="text-xs font-medium text-white/80">{c.kind === 'counter' ? 'Contador' : 'Detallada'}</span>
-						</a>
-					))}
+								<span class="flex items-center gap-1 font-display font-bold leading-tight">
+									{c.name}
+									{c.ownerType === 'group' && <Users size={13} class="shrink-0 text-white/70" />}
+								</span>
+								<span class="flex items-baseline gap-1 text-xs font-medium text-white/80">
+									<span class="quick-counter-total font-display text-base font-extrabold text-white">
+										{countByCategory.get(c.id) ?? 0}
+									</span>
+									hoy · toca para +1
+								</span>
+								<a
+									href={`/app/categories/${c.id}`}
+									aria-label="Ver historial"
+									class="absolute right-3 top-3 rounded-full bg-white/15 p-1.5 hover:bg-white/25"
+								>
+									<History size={14} />
+								</a>
+							</button>
+						) : (
+							<button
+								type="button"
+								data-quick-add-card
+								data-category-id={c.id}
+								class={`relative flex flex-col gap-2 rounded-3xl bg-linear-to-br p-4 text-left text-white shadow-lg transition active:scale-[0.97] ${CARD_STYLES[i % CARD_STYLES.length]}`}
+							>
+								<CategoryIcon name={c.icon} class="h-7 w-7" />
+								<span class="flex items-center gap-1 font-display font-bold leading-tight">
+									{c.name}
+									{c.ownerType === 'group' && <Users size={13} class="shrink-0 text-white/70" />}
+								</span>
+								<span class="text-xs font-medium text-white/80">Toca para registrar</span>
+								<a
+									href={`/app/categories/${c.id}`}
+									aria-label="Ver historial"
+									class="absolute right-3 top-3 rounded-full bg-white/15 p-1.5 hover:bg-white/25"
+								>
+									<History size={14} />
+								</a>
+							</button>
+						)
+					)}
 				</div>
 			)
 		}
 	</section>
+
+	<QuickAddModal client:load categories={detailedCategoriesData} />
+
+	<script>
+		import { toast } from 'sonner';
+
+		document.querySelectorAll<HTMLButtonElement>('[data-quick-add-card]').forEach((card) => {
+			card.addEventListener('click', (e) => {
+				if ((e.target as HTMLElement).closest('a')) return;
+				window.dispatchEvent(new CustomEvent('recapp:open-quick-add', { detail: { categoryId: Number(card.dataset.categoryId) } }));
+			});
+		});
+
+		document.querySelectorAll<HTMLButtonElement>('[data-counter-card]').forEach((card) => {
+			card.addEventListener('click', async (e) => {
+				if ((e.target as HTMLElement).closest('a')) return;
+
+				const categoryId = card.dataset.categoryId;
+				card.disabled = true;
+
+				const res = await fetch('/api/entries', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ categoryId: Number(categoryId) }),
+				});
+
+				card.disabled = false;
+
+				if (!res.ok) {
+					const body = await res.json().catch(() => ({}));
+					toast.error(body.error ?? 'No se ha podido registrar.');
+					return;
+				}
+
+				const totalEl = card.querySelector('.quick-counter-total');
+				const newTotal = totalEl ? Number(totalEl.textContent) + 1 : null;
+				if (totalEl && newTotal !== null) totalEl.textContent = String(newTotal);
+				toast.success(newTotal !== null ? `Hoy: ${newTotal}` : 'Registrado');
+			});
+		});
+	</script>
 </AppShell>

@@ -22,18 +22,22 @@
     "astro": "^7.2.10",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.2",
+    "framer-motion": "^13.1.1",
     "jose": "^6.2.10",
     "lucide-react": "^1.39.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "sonner": "^2.0.8",
-    "tailwindcss": "^4.3.3"
+    "tailwindcss": "^4.3.3",
+    "web-push": "^3.6.7"
   },
   "allowScripts": {
     "esbuild": true
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
+    "@netlify/functions": "^6.0.0",
+    "@types/web-push": "^3.6.4",
     "drizzle-kit": "^0.31.10",
     "typescript": "^5.9.3"
   }

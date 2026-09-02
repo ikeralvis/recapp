@@ -1,10 +1,11 @@
-import { sqliteTable, text, integer, primaryKey } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, primaryKey, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const users = sqliteTable('users', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
 	email: text('email').notNull().unique(),
 	passwordHash: text('password_hash').notNull(),
 	name: text('name').notNull(),
+	avatarColor: text('avatar_color').notNull().default('blue'),
 	createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
@@ -63,4 +64,26 @@ export const entries = sqliteTable('entries', {
 export const entryParticipants = sqliteTable('entry_participants', {
 	entryId: integer('entry_id').notNull().references(() => entries.id),
 	userId: integer('user_id').notNull().references(() => users.id),
+});
+
+export const trophies = sqliteTable(
+	'trophies',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		categoryId: integer('category_id').notNull().references(() => categories.id),
+		period: text('period').notNull(), // 'YYYY-MM' o 'YYYY'
+		winnerUserId: integer('winner_user_id').references(() => users.id),
+		value: integer('value').notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+	},
+	(table) => [uniqueIndex('trophies_category_period_unique').on(table.categoryId, table.period)]
+);
+
+export const pushSubscriptions = sqliteTable('push_subscriptions', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	userId: integer('user_id').notNull().references(() => users.id),
+	endpoint: text('endpoint').notNull().unique(),
+	p256dh: text('p256dh').notNull(),
+	auth: text('auth').notNull(),
+	createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });

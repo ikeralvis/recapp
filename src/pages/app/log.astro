@@ -1,11 +1,22 @@
 ---
 import AppShell from '../../layouts/AppShell.astro';
 import CategoryIcon from '../../components/CategoryIcon.astro';
+import QuickAddModal from '../../components/QuickAddModal';
 import { ArrowLeft, Users } from '@lucide/astro';
 import { listAccessibleCategories } from '../../lib/categoryAccess';
+import type { CategoryField } from '../../lib/categoryField';
 
 const userId = Astro.locals.user!.id;
 const myCategories = await listAccessibleCategories(userId);
+
+const detailedCategoriesData = myCategories
+	.filter((c) => c.kind === 'detailed')
+	.map((c) => ({
+		id: c.id,
+		name: c.name,
+		icon: c.icon,
+		fields: c.schemaJson as unknown as CategoryField[],
+	}));
 ---
 
 <AppShell title="Registrar — RecApp" active="home">
@@ -21,7 +32,7 @@ const myCategories = await listAccessibleCategories(userId);
 		{
 			myCategories.length === 0 ? (
 				<p class="rounded-3xl bg-white px-4 py-8 text-center text-sm text-slate-500 shadow-sm ring-1 ring-sky-100">
-					Todavía no tienes categorías.{' '}
+					Todavía no tienes categorías.
 					<a href="/app/categories/new" class="font-semibold text-blue-600">
 						Crea una
 					</a>
@@ -43,7 +54,7 @@ const myCategories = await listAccessibleCategories(userId);
 							</div>
 							<span class="font-semibold text-slate-800">{c.name}</span>
 							<span class="text-xs font-medium text-slate-400">
-								{c.kind === 'counter' ? 'Toca para +1' : 'Abrir formulario'}
+								{c.kind === 'counter' ? 'Toca para +1' : 'Toca para registrar'}
 							</span>
 						</button>
 					))}
@@ -52,9 +63,10 @@ const myCategories = await listAccessibleCategories(userId);
 		}
 	</section>
 
+	<QuickAddModal client:load categories={detailedCategoriesData} />
+
 	<script>
 		import { toast } from 'sonner';
-		import { setFlashMessage } from '../../lib/flash';
 
 		document.querySelectorAll<HTMLButtonElement>('.log-category-btn').forEach((btn) => {
 			btn.addEventListener('click', async () => {
@@ -62,7 +74,7 @@ const myCategories = await listAccessibleCategories(userId);
 				const kind = btn.dataset.kind;
 
 				if (kind !== 'counter') {
-					window.location.href = `/app/categories/${categoryId}`;
+					window.dispatchEvent(new CustomEvent('recapp:open-quick-add', { detail: { categoryId: Number(categoryId) } }));
 					return;
 				}
 
@@ -80,8 +92,7 @@ const myCategories = await listAccessibleCategories(userId);
 					return;
 				}
 
-				setFlashMessage('+1 registrado');
-				window.location.href = '/app';
+				toast.success('+1 registrado');
 			});
 		});
 	</script>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Users, Plus, Link2, Copy } from 'lucide-react';
+import { getCachedGroups, setCachedGroups } from '../lib/groupsCache';
 
 interface Member {
 	id: number;
@@ -23,9 +24,18 @@ export default function GroupsPanel() {
 	const [generatingFor, setGeneratingFor] = useState<number | null>(null);
 
 	useEffect(() => {
+		const cached = getCachedGroups<Group[]>();
+		if (cached) {
+			setGroups(cached);
+			setLoading(false);
+		}
+
 		fetch('/api/groups')
 			.then((r) => r.json())
-			.then(setGroups)
+			.then((data: Group[]) => {
+				setGroups(data);
+				setCachedGroups(data);
+			})
 			.finally(() => setLoading(false));
 	}, []);
 
@@ -48,7 +58,11 @@ export default function GroupsPanel() {
 			return;
 		}
 
-		setGroups((g) => [...g, body]);
+		setGroups((g) => {
+			const next = [...g, body];
+			setCachedGroups(next);
+			return next;
+		});
 		setNewGroupName('');
 		setShowCreate(false);
 		toast.success('Grupo creado');
