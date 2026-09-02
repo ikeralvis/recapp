@@ -15,6 +15,7 @@ export interface SessionPayload extends Record<string, unknown> {
 	sub: string;
 	email: string;
 	name: string;
+	accentColor: string;
 }
 
 export async function signSession(payload: SessionPayload, secret: string) {

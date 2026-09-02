@@ -14,6 +14,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 				id: Number(payload.sub),
 				email: payload.email,
 				name: payload.name,
+				accentColor: payload.accentColor ?? 'blue',
 			};
 		} catch {
 			context.cookies.delete(SESSION_COOKIE, { path: '/' });

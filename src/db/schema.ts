@@ -6,6 +6,9 @@ export const users = sqliteTable('users', {
 	passwordHash: text('password_hash').notNull(),
 	name: text('name').notNull(),
 	avatarColor: text('avatar_color').notNull().default('blue'),
+	avatarStyle: text('avatar_style'),
+	avatarSeed: text('avatar_seed').notNull().default(''),
+	accentColor: text('accent_color').notNull().default('blue'),
 	createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 

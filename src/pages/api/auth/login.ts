@@ -21,7 +21,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 	}
 
 	const token = await signSession(
-		{ sub: String(user.id), email: user.email, name: user.name },
+		{ sub: String(user.id), email: user.email, name: user.name, accentColor: user.accentColor },
 		import.meta.env.JWT_SECRET
 	);
 	cookies.set(SESSION_COOKIE, token, {

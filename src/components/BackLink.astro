@@ -1,0 +1,26 @@
+---
+import { ArrowLeft } from '@lucide/astro';
+
+interface Props {
+	fallback: string;
+	label?: string;
+}
+
+const { fallback, label = 'Volver' } = Astro.props;
+---
+
+<a href={fallback} data-smart-back class="inline-flex items-center gap-1 text-sm font-semibold text-blue-600">
+	<ArrowLeft size={16} /> {label}
+</a>
+
+<script>
+	document.querySelectorAll<HTMLAnchorElement>('[data-smart-back]').forEach((link) => {
+		link.addEventListener('click', (e) => {
+			const sameOriginReferrer = document.referrer && new URL(document.referrer).origin === location.origin;
+			if (sameOriginReferrer && history.length > 1) {
+				e.preventDefault();
+				history.back();
+			}
+		});
+	});
+</script>

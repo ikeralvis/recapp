@@ -1,14 +1,12 @@
 ---
 import AppShell from '../../../layouts/AppShell.astro';
 import CategoryForm from '../../../components/CategoryForm';
-import { ArrowLeft } from '@lucide/astro';
+import BackLink from '../../../components/BackLink.astro';
 ---
 
 <AppShell title="Nueva categoría — RecApp" active="home">
 	<header class="px-6 pt-8 pb-5">
-		<a href="/app/categories" class="inline-flex items-center gap-1 text-sm font-semibold text-blue-600">
-			<ArrowLeft size={16} /> Mis categorías
-		</a>
+		<BackLink fallback="/app/categories" />
 		<h1 class="font-display text-2xl font-extrabold text-slate-900">Nueva categoría</h1>
 	</header>
 	<section class="px-6">

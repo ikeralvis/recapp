@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Trophy, TrendingUp, Users, Sparkles } from 'lucide-react';
+import { getCached, setCached } from '../lib/apiCache';
+
+const CACHE_TTL_MS = 60_000;
 
 type PeriodKind = 'month' | 'year';
 
@@ -49,12 +52,22 @@ export default function StatsView({ currentUserId }: { currentUserId: number }) 
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
-		setLoading(true);
+		const cacheKey = `recapp_stats_${periodKey}`;
+		const cached = getCached<{ label: string; categories: CategoryStats[] }>(cacheKey, CACHE_TTL_MS);
+		if (cached) {
+			setLabel(cached.label);
+			setCategories(cached.categories);
+			setLoading(false);
+		} else {
+			setLoading(true);
+		}
+
 		fetch(`/api/stats?period=${periodKey}`)
 			.then((r) => r.json())
 			.then((body) => {
 				setLabel(body.period?.label ?? '');
 				setCategories(body.categories ?? []);
+				setCached(cacheKey, { label: body.period?.label ?? '', categories: body.categories ?? [] });
 			})
 			.finally(() => setLoading(false));
 	}, [periodKey]);

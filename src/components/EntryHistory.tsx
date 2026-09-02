@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Trash2 } from 'lucide-react';
 import type { CategoryField } from '../lib/categoryField';
+import { getCached, setCached } from '../lib/apiCache';
+
+const CACHE_TTL_MS = 60_000;
 
 interface Entry {
 	id: number;
@@ -26,12 +29,18 @@ export default function EntryHistory({
 	showAuthor: boolean;
 	currentUserId: number;
 }) {
-	const [entries, setEntries] = useState<Entry[]>([]);
-	const [loading, setLoading] = useState(true);
+	const cacheKey = `recapp_entries_${categoryId}`;
+	const cached = getCached<Entry[]>(cacheKey, CACHE_TTL_MS);
+	const [entries, setEntries] = useState<Entry[]>(cached ?? []);
+	const [loading, setLoading] = useState(!cached);
 
 	async function load() {
 		const res = await fetch(`/api/entries?categoryId=${categoryId}`);
-		if (res.ok) setEntries(await res.json());
+		if (res.ok) {
+			const data = await res.json();
+			setEntries(data);
+			setCached(cacheKey, data);
+		}
 		setLoading(false);
 	}
 
@@ -48,7 +57,11 @@ export default function EntryHistory({
 			toast.error('No se ha podido borrar.');
 			return;
 		}
-		setEntries((e) => e.filter((entry) => entry.id !== id));
+		setEntries((e) => {
+			const next = e.filter((entry) => entry.id !== id);
+			setCached(cacheKey, next);
+			return next;
+		});
 		toast.success('Entrada borrada');
 	}
 

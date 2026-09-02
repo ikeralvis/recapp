@@ -2,16 +2,20 @@
 import AppShell from '../../layouts/AppShell.astro';
 import GroupsPanel from '../../components/GroupsPanel';
 import ReminderToggle from '../../components/ReminderToggle';
+import ProfileForm from '../../components/ProfileForm';
 import CategoryIcon from '../../components/CategoryIcon.astro';
 import { Trophy } from '@lucide/astro';
 import { desc, eq } from 'drizzle-orm';
 import { db } from '../../db/client';
 import { categories, trophies, users } from '../../db/schema';
-import { AVATAR_COLORS, isAvatarColor, DEFAULT_AVATAR_COLOR } from '../../lib/avatarColors';
+import { isAvatarColor, DEFAULT_AVATAR_COLOR } from '../../lib/avatarColors';
+import { isDicebearStyle } from '../../lib/avatar';
 
 const { user } = Astro.locals;
 const fullUser = user ? await db.select().from(users).where(eq(users.id, user.id)).get() : null;
 const currentColor = fullUser && isAvatarColor(fullUser.avatarColor) ? fullUser.avatarColor : DEFAULT_AVATAR_COLOR;
+const currentStyle = fullUser?.avatarStyle && isDicebearStyle(fullUser.avatarStyle) ? fullUser.avatarStyle : null;
+const currentAccent = fullUser && isAvatarColor(fullUser.accentColor) ? fullUser.accentColor : DEFAULT_AVATAR_COLOR;
 
 const myTrophies = user
 	? await db
@@ -25,14 +29,7 @@ const myTrophies = user
 ---
 
 <AppShell title="Perfil — RecApp" active="profile">
-	<header class="flex flex-col items-center gap-2 px-6 pt-10 pb-6">
-		<div
-			id="avatar-preview"
-			class:list={['flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-br font-display text-3xl font-extrabold text-white shadow-lg', AVATAR_COLORS[currentColor]]}
-		>
-			{user?.name?.[0]?.toUpperCase()}
-		</div>
-		<h1 class="font-display text-xl font-extrabold text-slate-900">{user?.name}</h1>
+	<header class="flex flex-col items-center gap-1 px-6 pt-10 pb-4 text-center">
 		<p class="text-sm text-slate-500">{user?.email}</p>
 	</header>
 
@@ -57,44 +54,15 @@ const myTrophies = user
 		)
 	}
 
-	<section class="flex flex-col gap-4 px-6">
-		<form id="profile-form" class="flex flex-col gap-3 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-sky-100">
-			<label class="flex flex-col gap-1 text-sm font-semibold text-slate-700">
-				Nombre
-				<input
-					name="name"
-					value={user?.name}
-					required
-					class="rounded-2xl border-2 border-sky-100 bg-white px-4 py-3 font-medium text-slate-900 outline-none transition focus:border-blue-500"
-				/>
-			</label>
-
-			<div class="flex flex-col gap-1 text-sm font-semibold text-slate-700">
-				Color de avatar
-				<input type="hidden" name="avatarColor" id="avatar-color-input" value={currentColor} />
-				<div class="flex gap-2">
-					{Object.entries(AVATAR_COLORS).map(([key, gradient]) => (
-						<button
-							type="button"
-							data-avatar-swatch={key}
-							aria-label={key}
-							class:list={[
-								'avatar-swatch h-9 w-9 rounded-full bg-linear-to-br transition',
-								gradient,
-								key === currentColor ? 'ring-2 ring-offset-2 ring-blue-500' : '',
-							]}
-						/>
-					))}
-				</div>
-			</div>
-
-			<button
-				type="submit"
-				class="rounded-2xl bg-blue-600 px-4 py-3 font-bold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700 active:scale-[0.98]"
-			>
-				Guardar cambios
-			</button>
-		</form>
+	<section class="flex flex-col gap-4 px-6 pb-6">
+		<ProfileForm
+			client:load
+			initialName={user?.name ?? ''}
+			initialColor={currentColor}
+			initialStyle={currentStyle}
+			initialSeed={fullUser?.avatarSeed ?? ''}
+			initialAccent={currentAccent}
+		/>
 
 		<ReminderToggle client:load />
 
@@ -109,43 +77,6 @@ const myTrophies = user
 	</section>
 
 	<script>
-		import { toast } from 'sonner';
-
-		const form = document.getElementById('profile-form') as HTMLFormElement;
-		const colorInput = document.getElementById('avatar-color-input') as HTMLInputElement;
-		const preview = document.getElementById('avatar-preview')!;
-
-		document.querySelectorAll<HTMLButtonElement>('.avatar-swatch').forEach((btn) => {
-			btn.addEventListener('click', () => {
-				const color = btn.dataset.avatarSwatch!;
-				colorInput.value = color;
-
-				document.querySelectorAll('.avatar-swatch').forEach((b) => b.classList.remove('ring-2', 'ring-offset-2', 'ring-blue-500'));
-				btn.classList.add('ring-2', 'ring-offset-2', 'ring-blue-500');
-
-				preview.className = preview.className.replace(/from-\S+ to-\S+/, '');
-				preview.classList.add(...btn.className.split(' ').filter((c) => c.startsWith('from-') || c.startsWith('to-')));
-			});
-		});
-
-		form.addEventListener('submit', async (e) => {
-			e.preventDefault();
-			const data = Object.fromEntries(new FormData(form));
-
-			const res = await fetch('/api/profile', {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(data),
-			});
-
-			const body = await res.json().catch(() => ({}));
-			if (res.ok) {
-				toast.success('Perfil actualizado');
-			} else {
-				toast.error(body.error ?? 'Algo ha ido mal.');
-			}
-		});
-
 		document.getElementById('logout-btn')?.addEventListener('click', async () => {
 			await fetch('/api/auth/logout', { method: 'POST' });
 			window.location.href = '/login';

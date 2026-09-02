@@ -4,7 +4,8 @@ import CategoryIcon from '../../../../components/CategoryIcon.astro';
 import CounterButton from '../../../../components/CounterButton';
 import EntryForm from '../../../../components/EntryForm';
 import EntryHistory from '../../../../components/EntryHistory';
-import { ArrowLeft, Pencil } from '@lucide/astro';
+import BackLink from '../../../../components/BackLink.astro';
+import { Pencil } from '@lucide/astro';
 import { and, eq, gte, sql } from 'drizzle-orm';
 import { db } from '../../../../db/client';
 import { categories, entries } from '../../../../db/schema';
@@ -45,9 +46,7 @@ if (category.kind === 'counter') {
 
 <AppShell title={`${category.name} — RecApp`} active="home">
 	<header class="flex items-center justify-between px-6 pt-8 pb-5">
-		<a href="/app/categories" class="inline-flex items-center gap-1 text-sm font-semibold text-blue-600">
-			<ArrowLeft size={16} /> Mis categorías
-		</a>
+		<BackLink fallback="/app" />
 		<a href={`/app/categories/${category.id}/edit`} class="rounded-full bg-white p-2 text-slate-500 shadow-sm ring-1 ring-sky-100">
 			<Pencil size={16} />
 		</a>
