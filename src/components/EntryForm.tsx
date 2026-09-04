@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import type { CategoryField } from '../lib/categoryField';
+import EntryFieldsInput from './EntryFieldsInput';
 
 function todayLocal() {
 	const now = new Date();
@@ -57,40 +58,7 @@ export default function EntryForm({ categoryId, fields }: { categoryId: number; 
 
 	return (
 		<form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-sky-100">
-			{visibleFields.map((field) => (
-				<label key={field.key} className="flex flex-col gap-1 text-sm font-semibold text-slate-700">
-					{field.label}
-					{field.required && <span className="text-red-500"> *</span>}
-					{field.type === 'select' ? (
-						<select
-							value={values[field.key] ?? ''}
-							onChange={(e) => setValue(field.key, e.target.value)}
-							className="rounded-xl border-2 border-sky-100 px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:border-blue-500"
-						>
-							<option value="">Selecciona...</option>
-							{field.options?.map((opt) => (
-								<option key={opt} value={opt}>
-									{opt}
-								</option>
-							))}
-						</select>
-					) : field.type === 'text_long' ? (
-						<textarea
-							value={values[field.key] ?? ''}
-							onChange={(e) => setValue(field.key, e.target.value)}
-							rows={3}
-							className="rounded-xl border-2 border-sky-100 px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:border-blue-500"
-						/>
-					) : (
-						<input
-							type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-							value={values[field.key] ?? ''}
-							onChange={(e) => setValue(field.key, e.target.value)}
-							className="rounded-xl border-2 border-sky-100 px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:border-blue-500"
-						/>
-					)}
-				</label>
-			))}
+			<EntryFieldsInput fields={visibleFields} values={values} onChange={setValue} />
 
 			<label className="flex flex-col gap-1 text-sm font-semibold text-slate-700">
 				Fecha

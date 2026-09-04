@@ -18,22 +18,20 @@ export default async () => {
 		const todaysEntries = await db
 			.select({ id: schema.entries.id })
 			.from(schema.entries)
-			.where(and(eq(schema.entries.userId, userId), gte(schema.entries.occurredAt, startOfToday)))
-			.limit(1);
+			.where(and(eq(schema.entries.userId, userId), gte(schema.entries.occurredAt, startOfToday)));
 
-		if (todaysEntries.length === 0) {
-			await sendPushToUser(userId, {
-				title: 'RecApp',
-				body: 'Todavía no has registrado nada hoy. ¡No se te olvide!',
-				url: '/app/log',
-			});
-		}
+		const body =
+			todaysEntries.length === 0
+				? 'Todavía no has registrado nada hoy. ¡No se te olvide!'
+				: `Hoy llevas ${todaysEntries.length} ${todaysEntries.length === 1 ? 'entrada' : 'entradas'}. ¡Buen ritmo!`;
+
+		await sendPushToUser(userId, { title: 'RecApp', body, url: '/app/log' });
 	}
 
 	return new Response('ok');
 };
 
 export const config: Config = {
-	// 20:00 UTC ≈ 21:00-22:00 hora de España (según horario de verano). Ajustable.
-	schedule: '0 20 * * *',
+	// 19:00 UTC ≈ 20:00-21:00 hora de España (según horario de verano). Ajustable.
+	schedule: '0 19 * * *',
 };

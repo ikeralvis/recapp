@@ -1,6 +1,45 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Trophy, TrendingUp, Users, Sparkles } from 'lucide-react';
 import { getCached, setCached } from '../lib/apiCache';
+
+const CONFETTI_COLORS = ['#2563eb', '#f59e0b', '#e11d48', '#059669', '#7c3aed', '#0ea5e9'];
+
+function Confetti() {
+	const pieces = useMemo(
+		() =>
+			Array.from({ length: 22 }, (_, i) => ({
+				id: i,
+				x: (Math.random() - 0.5) * 220,
+				rotate: Math.random() * 360,
+				color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+				delay: Math.random() * 0.15,
+			})),
+		[]
+	);
+
+	return (
+		<div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+			{pieces.map((p) => (
+				<motion.span
+					key={p.id}
+					initial={{ x: 0, y: 0, opacity: 1, rotate: 0 }}
+					animate={{ x: p.x, y: 140, opacity: 0, rotate: p.rotate }}
+					transition={{ duration: 1.1, delay: p.delay, ease: 'easeOut' }}
+					style={{
+						position: 'absolute',
+						top: '10%',
+						left: '50%',
+						width: 6,
+						height: 10,
+						background: p.color,
+						borderRadius: 2,
+					}}
+				/>
+			))}
+		</div>
+	);
+}
 
 const CACHE_TTL_MS = 60_000;
 
@@ -143,7 +182,7 @@ export default function StatsView({ currentUserId }: { currentUserId: number }) 
 								<Users size={16} className="text-blue-600" /> De grupo
 							</p>
 							{groupCategories.map((c) => (
-								<CategoryCard key={c.id} stats={c} currentUserId={currentUserId} />
+								<CategoryCard key={c.id} stats={c} currentUserId={currentUserId} periodKey={periodKey} />
 							))}
 						</div>
 					)}
@@ -152,7 +191,7 @@ export default function StatsView({ currentUserId }: { currentUserId: number }) 
 						<div className="flex flex-col gap-3">
 							<p className="text-sm font-semibold text-slate-700">Personales</p>
 							{personalCategories.map((c) => (
-								<CategoryCard key={c.id} stats={c} currentUserId={currentUserId} />
+								<CategoryCard key={c.id} stats={c} currentUserId={currentUserId} periodKey={periodKey} />
 							))}
 						</div>
 					)}
@@ -162,11 +201,26 @@ export default function StatsView({ currentUserId }: { currentUserId: number }) 
 	);
 }
 
-function CategoryCard({ stats, currentUserId }: { stats: CategoryStats; currentUserId: number }) {
+function CategoryCard({ stats, currentUserId, periodKey }: { stats: CategoryStats; currentUserId: number; periodKey: string }) {
 	const maxMemberTotal = stats.byMember ? Math.max(...stats.byMember.map((m) => m.total), 1) : 1;
+	const wonByMe = stats.trophy?.closed && stats.trophy.winnerUserId === currentUserId;
+	const [showConfetti, setShowConfetti] = useState(false);
+
+	useEffect(() => {
+		if (!wonByMe) return;
+		const seenKey = `recapp_seen_trophy_${stats.id}_${periodKey}`;
+		try {
+			if (localStorage.getItem(seenKey)) return;
+			localStorage.setItem(seenKey, '1');
+			setShowConfetti(true);
+		} catch {
+			// localStorage puede fallar en modo privado; simplemente no mostramos el confeti
+		}
+	}, [wonByMe, stats.id, periodKey]);
 
 	return (
-		<div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-sky-100">
+		<div className="relative rounded-2xl bg-white p-4 shadow-sm ring-1 ring-sky-100">
+			{showConfetti && <Confetti />}
 			<div className="mb-2 flex items-center justify-between">
 				<p className="font-semibold text-slate-800">{stats.name}</p>
 				<p className="font-display text-lg font-extrabold text-blue-600">{stats.total}</p>

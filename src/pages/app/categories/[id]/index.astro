@@ -5,11 +5,12 @@ import CounterButton from '../../../../components/CounterButton';
 import EntryForm from '../../../../components/EntryForm';
 import EntryHistory from '../../../../components/EntryHistory';
 import BackLink from '../../../../components/BackLink.astro';
-import { Pencil } from '@lucide/astro';
+import { Pencil, Flame } from '@lucide/astro';
 import { and, eq, gte, sql } from 'drizzle-orm';
 import { db } from '../../../../db/client';
 import { categories, entries } from '../../../../db/schema';
 import { canAccessCategory, isPersonalView } from '../../../../lib/categoryAccess';
+import { getCurrentStreak } from '../../../../lib/streak';
 import type { CategoryField } from '../../../../lib/categoryField';
 
 const userId = Astro.locals.user!.id;
@@ -42,6 +43,8 @@ if (category.kind === 'counter') {
 	lifetimeTotal = lifetimeResult?.count ?? 0;
 	todayTotal = todayResult?.count ?? 0;
 }
+
+const streak = await getCurrentStreak(category.id, userId, personalOnly);
 ---
 
 <AppShell title={`${category.name} — RecApp`} active="home">
@@ -57,7 +60,14 @@ if (category.kind === 'counter') {
 			<span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
 				<CategoryIcon name={category.icon} class="h-6 w-6" />
 			</span>
-			<h1 class="font-display text-2xl font-extrabold text-slate-900">{category.name}</h1>
+			<div class="flex items-center gap-2">
+				<h1 class="font-display text-2xl font-extrabold text-slate-900">{category.name}</h1>
+				{streak >= 2 && (
+					<span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-xs font-bold text-amber-600">
+						<Flame size={13} /> {streak}
+					</span>
+				)}
+			</div>
 		</div>
 
 		{
